@@ -1,0 +1,186 @@
+application:
+  subdomain: bambuddy
+  # 网盘「用应用打开」：声明本应用可打开 3MF（官方 advanced-mime / spec/manifest 第 8 节）。
+  # %u 会被系统替换成网盘上的文件路径，由 bambuddy-open-from-netdisk 注入把它导入应用。
+  file_handler:
+    mime:
+      - x-lzc-extension/3mf
+    actions:
+      open: /?lzcOpenFile=%u
+  upstreams:
+    - location: /
+      backend: http://bambuddy.cloud.lazycat.app.bambuddy1.lzcapp:8000
+      disable_trim_location: true
+  health_check:
+    test_url: http://bambuddy.cloud.lazycat.app.bambuddy1.lzcapp:8000/
+    start_period: 300s
+    timeout: 10s
+  injects:
+    - id: bambuddy-default-zh
+      # 上游前端自带简体中文翻译（i18next 资源里有 zh-CN），但默认语言是 en。
+      # 官方要求界面中文，这里把语言键设为 zh-CN 并触发一次刷新让它生效；只做一次
+      # （打标记），用户之后在「设置 → 语言」里自己改过就不再干预。
+      # 实测：应用读的是 localStorage.bambutrack_language（同时也会写
+      # i18nextLng 给 i18next 用），两个键一起写最稳。
+      on: browser
+      auth_required: false
+      when:
+        - /*
+      do: |
+        (function () {
+          try {
+            if (localStorage.getItem("lzc_bambuddy_zh_seeded") === "1") return;
+            var cur = localStorage.getItem("bambutrack_language");
+            var need = !cur || cur === "en" || cur === "en-US" || cur === "en-GB";
+            if (need) localStorage.setItem("bambutrack_language", "zh-CN");
+            localStorage.setItem("i18nextLng", "zh-CN");
+            localStorage.setItem("lzc_bambuddy_zh_seeded", "1");
+            // 应用在启动时就已读取语言键，等这条注入到达时英文界面已经渲染完，
+            // 因此这次写入必须配合一次刷新才生效。只在「确实改写了语言」时刷一次，
+            // 标记位保证不会循环；用户之后自己改语言也不会被再次干扰。
+            if (need) {
+              var go = function () { try { location.reload(); } catch (e) {} };
+              if (document.readyState === "complete") setTimeout(go, 200);
+              else window.addEventListener("load", function () { setTimeout(go, 200); });
+            }
+          } catch (e) {}
+        })();
+    - id: lazycat-file-bridge
+      'on': request
+      auth_required: false
+      when:
+        - /__lazycat_file_bridge/*
+      do:
+        - src: >
+            const bridgePrefix = "/__lazycat_file_bridge";
+
+            const requestHost = String(ctx.request.host ||
+            "").split(":")[0].toLowerCase();
+
+            const firstDot = requestHost.indexOf(".");
+
+            const method = String(ctx.request.method || "").toUpperCase();
+
+            if (firstDot <= 0 || !requestHost.endsWith(".heiyu.space") ||
+            !["GET", "HEAD", "PUT"].includes(method)) {
+              ctx.response.send(["GET", "HEAD", "PUT"].includes(method) ? 400 : 405, "Invalid LazyCat file bridge request");
+              return;
+            }
+
+            const boxDomain = requestHost.slice(firstDot + 1);
+
+            ctx.headers.del("Origin");
+
+            ctx.headers.del("Referer");
+
+            ctx.proxy.to("https://file." + boxDomain, { path: "/files/home" +
+            ctx.request.path.slice(bridgePrefix.length), query:
+            ctx.request.raw_query, use_target_host: true, timeout_ms: 120000,
+            on_fail: "error" });
+    - id: open-save-chooser
+      'on': browser
+      auth_required: false
+      when:
+        - /*
+      do:
+        - src: >-
+            file:///lzcapp/pkg/content/lazycat-injects/lzc-file-chooser-inject.js
+          params:
+            diskRoot: /_lzc/files/home
+            fileBridgeRoot: /__lazycat_file_bridge
+            fallbackMime: application/octet-stream
+            locale: auto
+            hooks:
+              fileSystemAccess: true
+              fileInput: true
+              downloadAnchor: true
+    - id: bambuddy-csp-allow-blob-download
+      # 官方文件拦截器在「保存 blob: 下载」前会 fetch(blob:) 读取内容；应用自带 CSP
+      # 的 connect-src 只有 'self' ws: wss:，会把该 fetch 拦掉（实测 fetch(blob:)
+      # 报 Failed to fetch），导致导出/下载到网盘失败。这里仅对文档响应把
+      # connect-src 扩展一个 blob:，其余指令不动（官方 advanced-injects 的 CSP 微调用法）。
+      on: response
+      auth_required: false
+      when:
+        - /*
+      do:
+        - src: |
+            const csp = ctx.headers.get("Content-Security-Policy");
+            if (csp && /connect-src/i.test(csp) && !/connect-src[^;]*\bblob:/i.test(csp)) {
+              ctx.headers.set(
+                "Content-Security-Policy",
+                csp.replace(/connect-src([^;]*)/i, "connect-src$1 blob:"),
+              );
+            }
+    - id: bambuddy-2fa-status-noauth
+      # 上游在无鉴权模式下仍会调 /api/v1/auth/2fa/status，后端 get_current_active_user
+      # 直接 401，导致 Settings 页必然报错。鉴权关闭时 2FA 必然未启用，
+      # 这里返回语义正确的空状态；带 Authorization 的请求仍放行给后端。
+      on: request
+      auth_required: false
+      when:
+        - /api/v1/auth/2fa/status
+      do:
+        - src: |
+            const auth = String(ctx.headers.get("Authorization") || "");
+            if (auth) return;
+            ctx.response.send(200, JSON.stringify({
+              totp_enabled: false,
+              email_otp_enabled: false,
+              backup_codes_remaining: 0
+            }), { content_type: "application/json" });
+    - id: bambuddy-http-download-bridge
+      # 官方拦截器只认 blob:/data: 下载锚点；bambuddy 的 3D 文件、延时摄影、
+      # 归档照片与二维码下载是直连自身后端的普通 HTTP 地址，必须补接，
+      # 否则会被浏览器原生下载接管，审核判定「下载功能未接网盘」。
+      on: browser
+      auth_required: false
+      when:
+        - /*
+      do:
+        - src: file:///lzcapp/pkg/content/lazycat-injects/bambuddy-http-download-bridge.js
+    - id: bambuddy-open-from-netdisk
+      # 网盘右键「用应用打开」3MF 时（file_handler 的 open 动作）把文件导入本应用。
+      on: browser
+      auth_required: false
+      when:
+        - /*
+      do:
+        - src: file:///lzcapp/pkg/content/lazycat-injects/bambuddy-open-from-netdisk.js
+    - id: bambuddy-first-run-setup
+      'on': browser
+      auth_required: false
+      when:
+        - /setup
+        - /setup/*
+      do:
+        - src: |
+            (function () {
+              var done = false;
+              function tick() {
+                if (done) return true;
+                var cb = document.querySelector('#auth-enabled');
+                var btn = [].slice.call(document.querySelectorAll('button[type=submit]')).filter(function (b) {
+                  return /完成设置|Complete setup|Finish/i.test(b.innerText || '');
+                })[0] || document.querySelector('button[type=submit]');
+                if (!cb || !btn || btn.disabled) return false;
+                if (cb.checked) { cb.click(); }
+                done = true;
+                setTimeout(function () { try { btn.click(); } catch (e) {} }, 400);
+                return true;
+              }
+              if (!tick()) {
+                var t = setInterval(function () { if (tick()) clearInterval(t); }, 500);
+                setTimeout(function () { clearInterval(t); }, 30000);
+              }
+            })();
+services:
+  bambuddy:
+    image: registry.lazycat.cloud/wans/maziggy/bambuddy:8c5d60e2d0fec26e
+    environment:
+      - TZ=Asia/Shanghai
+      - PUID=1000
+      - PGID=1000
+    binds:
+      - /lzcapp/var/data:/app/data
+      - /lzcapp/var/logs:/app/logs
