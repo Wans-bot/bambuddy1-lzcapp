@@ -22,7 +22,7 @@ images:
     service: bambuddy
     source: ghcr.io/maziggy/bambuddy
     channel: stable
-    tag_regex: '^v?0\.\d+\.\d+$'
+    tag_regex: '^v?\d+\.\d+\.\d+$'
     sort: semver
     delivery:
       mode: lazycat
