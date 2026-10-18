@@ -29,6 +29,20 @@ images:
 
 stores:
   official:
-    enabled: false
+    enabled: true
+    application:
+      brief: "3D 打印机管理台"
+      description: "Bambuddy 为拓竹（Bambu Lab）3D 打印机提供统一管理面板：打印机状态、耗材、打印队列、模型归档与统计分析。"
+      keywords:
+        - "3D打印"
+        - "拓竹"
+        - "Bambu"
+        - "打印队列"
+        - "耗材"
+      support_pc: true
+      screenshot_pc_files:
+        - ".github/screenshots/pc-1.png"
+        - ".github/screenshots/pc-2.png"
+        - ".github/screenshots/pc-3.png"
   private:
     enabled: false
