@@ -54,14 +54,15 @@ application:
         - src: >
             const bridgePrefix = "/__lazycat_file_bridge";
 
-            const requestHost = String(ctx.request.host || "").split(":")[0].toLowerCase();
+            const requestHost = String(ctx.request.host ||
+            "").split(":")[0].toLowerCase();
 
             const firstDot = requestHost.indexOf(".");
 
             const method = String(ctx.request.method || "").toUpperCase();
 
-            if (firstDot <= 0 || !requestHost.endsWith(".heiyu.space") || !["GET", "HEAD", "PUT"].includes(method)) {
-
+            if (firstDot <= 0 || !requestHost.endsWith(".heiyu.space") ||
+            !["GET", "HEAD", "PUT"].includes(method)) {
               ctx.response.send(["GET", "HEAD", "PUT"].includes(method) ? 400 : 405, "Invalid LazyCat file bridge request");
               return;
             }
@@ -72,8 +73,10 @@ application:
 
             ctx.headers.del("Referer");
 
-            ctx.proxy.to("https://file." + boxDomain, { path: "/files/home" + ctx.request.path.slice(bridgePrefix.length), query: ctx.request.raw_query, use_target_host: true, timeout_ms: 120000, on_fail: "error" });
-
+            ctx.proxy.to("https://file." + boxDomain, { path: "/files/home" +
+            ctx.request.path.slice(bridgePrefix.length), query:
+            ctx.request.raw_query, use_target_host: true, timeout_ms: 120000,
+            on_fail: "error" });
     - id: open-save-chooser
       'on': browser
       auth_required: false
@@ -173,8 +176,7 @@ application:
             })();
 services:
   bambuddy:
-    # upstream: ghcr.io/maziggy/bambuddy:1.2.5
-    image: registry.lazycat.cloud/wans/maziggy/bambuddy:942783f49389abcc
+    image: registry.lazycat.cloud/wans/maziggy/bambuddy:8c5d60e2d0fec26e
     environment:
       - TZ=Asia/Shanghai
       - PUID=1000

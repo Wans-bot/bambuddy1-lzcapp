@@ -1,5 +1,5 @@
 package: cloud.lazycat.app.bambuddy1
-version: 1.2.5
+version: 1.2.5-18
 name: bambuddy
 description: 自托管的拓竹 3D 打印机管理台：实时状态、摄像头、耗材与打印队列
 author: maziggy
@@ -22,8 +22,8 @@ locales:
 
       1. 打开应用进入登录页；账号由微服侧自动填充，直接进入控制台。
 
-      2. 首次进入会引导你添加打印机：填入打印机的**局域网 IP**（在打印机屏幕上「设置 → 网络」里能看到）和**访问码**（同页的 Access Code，8 位）。
-
+      2. 首次进入会引导你添加打印机：填入打印机的**局域网 IP**（在打印机屏幕上「设置 → 网络」里能看到）和**访问码**（同页的 Access
+      Code，8 位）。
          - 打印机需要和微服在同一个局域网内。
          - 由于微服应用运行在桥接网络里，自动发现可能不可用，请用手动填 IP 的方式添加。
       3. 添加成功后控制台会显示实时状态：喷嘴/热床温度、当前打印进度与剩余时间、AMS 耗材余量、摄像头画面、历史与统计。
@@ -47,7 +47,6 @@ locales:
       - 免登录：账号密码由微服侧注入并自动填充，用户不需要手输。
 
       - 本应用默认使用桥接网络（没有用 host 网络），因此打印机的自动发现与「虚拟打印机」相关的端口映射能力受限；
-
         手动填 IP 添加打印机不受影响。
 
 
@@ -60,35 +59,48 @@ locales:
       - 3MF/STL 上传、耗材与配置导入、项目备份、3D 文件下载、延时摄影归档、照片与二维码均已接入网盘文件拦截。
 
       - 在懒猫网盘里右键一个 3MF 文件，选择用本应用打开，会把该文件导入到「归档」里。
-
   en-US:
     name: Bambuddy
     description: >-
-      Self-hosted command center for Bambu Lab 3D printers — live status, camera, filament and print queue, all on your own box.
+      Self-hosted command center for Bambu Lab 3D printers — live status,
+      camera, filament and print queue, all on your own box.
     usage: >
-      Bambuddy is a self-hosted control center for Bambu Lab 3D printers. Everything stays on your box instead of Bambu's cloud.
+      Bambuddy is a self-hosted control center for Bambu Lab 3D printers.
+      Everything stays on your box instead of Bambu's cloud.
 
 
       Getting started:
 
-      1. Open the app — the built-in account is filled in automatically by the box platform.
+      1. Open the app — the built-in account is filled in automatically by the
+      box platform.
 
-      2. Add your printer with its **LAN IP** (printer screen → Settings → Network) and the 8-character **Access Code** from the same screen. The printer must be on the same LAN as the box.
-
+      2. Add your printer with its **LAN IP** (printer screen → Settings →
+      Network) and the 8-character **Access Code** from the same screen. The
+      printer must be on the same LAN as the box.
          Automatic discovery may not work because the app runs in bridge networking; adding the printer by IP always works.
-      3. The dashboard then shows live status: nozzle/bed temperatures, print progress and remaining time, AMS filament levels, camera view, history and statistics.
+      3. The dashboard then shows live status: nozzle/bed temperatures, print
+      progress and remaining time, AMS filament levels, camera view, history and
+      statistics.
 
 
       Notes:
 
-      - Configuration, print history and files are stored in the app data directory and survive restarts and upgrades.
+      - Configuration, print history and files are stored in the app data
+      directory and survive restarts and upgrades.
 
-      - Login credentials are injected and autofilled by the box platform, so there is no password to type.
+      - Login credentials are injected and autofilled by the box platform, so
+      there is no password to type.
 
-      - The app runs in bridge networking (no host network), so printer auto-discovery and virtual-printer port mapping are limited; adding printers by IP is unaffected.
+      - The app runs in bridge networking (no host network), so printer
+      auto-discovery and virtual-printer port mapping are limited; adding
+      printers by IP is unaffected.
 
 
       Files:
 
-      - Every upload / import / open entry shows one unified dialog: pick a file from your box network drive, or pick a local file from your computer. - Every download / export / save-as button shows the same dialog: save to a network-drive folder, or download to your computer. - 3MF/STL uploads, filament and preset imports, project backups, 3D file downloads, archive timelapse, photos and QR codes are all supported.
-
+      - Every upload / import / open entry shows one unified dialog: pick a file
+      from your box network drive, or pick a local file from your computer.
+      - Every download / export / save-as button shows the same dialog: save to a
+      network-drive folder, or download to your computer.
+      - 3MF/STL uploads, filament and preset imports, project backups, 3D file
+      downloads, archive timelapse, photos and QR codes are all supported.
